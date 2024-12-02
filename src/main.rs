@@ -1,5 +1,6 @@
 use num_bigint::BigUint;
 use rand::Rng;
+use sha2::{Sha256, Digest};
 
 fn generate_keypair(p: &BigUint, g: &BigUint) -> (BigUint, BigUint) {
     let private_key = BigUint::from(rand::thread_rng().gen_range(1u32..23u32)); // x
@@ -12,8 +13,14 @@ fn prover_commit(p: &BigUint, g: &BigUint) -> (BigUint, BigUint) {
     generate_keypair(p, g)
 }
 
-fn verifier_challenge() -> BigUint {
-    BigUint::from(rand::thread_rng().gen_range(1u32..23u32))
+fn generate_challenge(g: &BigUint, p: &BigUint, y: &BigUint, t: &BigUint) -> BigUint {
+    let params = format!("{}{}{}{}", g, p, y, t);
+    
+    let mut hasher = Sha256::new();
+    hasher.update(params.as_bytes());
+    let result = hasher.finalize();
+    
+    BigUint::from_bytes_be(&result[0..4])
 }
 
 fn prover_response(r: &BigUint, e: &BigUint, private_key: &BigUint, q: &BigUint) -> BigUint {
@@ -72,11 +79,8 @@ fn main() {
 
     // 2. Challenge
 
-    // Verifier chooses a random e
-
-    // Prover shares e
-
-    let e = verifier_challenge();
+    // Instead of verifier choosing random e, prover generates it deterministically
+    let e = generate_challenge(&g, &p, &y, &t);
 
     println!("e: {}", &e);
 
